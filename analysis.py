@@ -13,6 +13,9 @@ def calculate_metrics(df):
         return df
     
     if len(df) < 50:
+        # Initialize columns with 0 to prevent KeyErrors in app.py
+        for col in ['RSI', 'MACD', 'MACD_SIGNAL', 'SMA_20', 'SMA_50', 'SMA_200', 'BBL', 'BBU', 'VOLATILITY', 'VOL_SMA_20']:
+            df[col] = 0
         return df
 
     # RSI
