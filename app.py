@@ -389,16 +389,16 @@ elif page == "Investment Forecast":
                 # Metrics Grid
                 c1, c2, c3, c4 = st.columns(4)
                 with c1:
-                    st.markdown(f"<div class='metric-container'><div class='metric-label'>RSI</div><div class='metric-value'>{best_df['RSI'].iloc[-1]:.1f}</div></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='metric-container'><div class='metric-label'>Trend (ADX)</div><div class='metric-value'>{best['ADX']:.1f}</div></div>", unsafe_allow_html=True)
                 with c2:
-                    st.markdown(f"<div class='metric-container'><div class='metric-label'>MACD</div><div class='metric-value'>{best_df['MACD'].iloc[-1]:.3f}</div></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='metric-container'><div class='metric-label'>RSI</div><div class='metric-value'>{best_df['RSI'].iloc[-1]:.1f}</div></div>", unsafe_allow_html=True)
                 with c3:
+                    rvol = best['RVOL']
+                    color = "#00E676" if rvol > 1.5 else "#E0E1DD"
+                    st.markdown(f"<div class='metric-container'><div class='metric-label'>Rel. Vol (RVOL)</div><div class='metric-value' style='color:{color}'>{rvol:.2f}x</div></div>", unsafe_allow_html=True)
+                with c4:
                     vol = best['Volatility']
                     st.markdown(f"<div class='metric-container'><div class='metric-label'>Volatility</div><div class='metric-value'>{vol:.2%}</div></div>", unsafe_allow_html=True)
-                with c4:
-                    vc = best['Volume Change']
-                    color = "#00E676" if vc > 0 else "#FF5252"
-                    st.markdown(f"<div class='metric-container'><div class='metric-label'>Vol Change</div><div class='metric-value' style='color:{color}'>{vc:.1%}</div></div>", unsafe_allow_html=True)
                 
                 st.write("") # Spacer
                 

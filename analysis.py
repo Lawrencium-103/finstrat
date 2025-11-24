@@ -8,36 +8,46 @@ MOONSHOT_TICKERS = ["COIN", "PLTR", "DKNG", "ROKU", "SQ", "ARKK", "NVDA", "TSLA"
 INDICES = ["SPY", "QQQ", "IWM"]
 
 def calculate_metrics(df):
-    """Calculates technical indicators for the given dataframe."""
-    if df.empty:
-        return df
-    
-    if len(df) < 50:
-        # Initialize columns with 0 to prevent KeyErrors in app.py
-        for col in ['RSI', 'MACD', 'MACD_SIGNAL', 'SMA_20', 'SMA_50', 'SMA_200', 'BBL', 'BBU', 'VOLATILITY', 'VOL_SMA_20']:
+    """Calculates institutional-grade technical indicators."""
+    if df.empty or len(df) < 50:
+        # Initialize columns with 0 to prevent KeyErrors
+        for col in ['RSI', 'MACD', 'MACD_SIGNAL', 'SMA_20', 'SMA_50', 'SMA_200', 'BBL', 'BBU', 'VOLATILITY', 'VOL_SMA_20', 'ADX', 'ATR', 'RVOL']:
             df[col] = 0
         return df
 
-    # RSI
-    df['RSI'] = ta.rsi(df['close'], length=14)
-    
-    # MACD
-    macd = ta.macd(df['close'])
-    df['MACD'] = macd['MACD_12_26_9']
-    df['MACD_SIGNAL'] = macd['MACDs_12_26_9']
-    
+    # --- Trend ---
     # SMA
     df['SMA_20'] = ta.sma(df['close'], length=20)
     df['SMA_50'] = ta.sma(df['close'], length=50)
     df['SMA_200'] = ta.sma(df['close'], length=200)
     
+    # ADX (Trend Strength)
+    adx = ta.adx(df['high'], df['low'], df['close'], length=14)
+    if adx is not None and not adx.empty:
+        df['ADX'] = adx['ADX_14']
+    else:
+        df['ADX'] = 0
+
+    # --- Momentum ---
+    # RSI
+    df['RSI'] = ta.rsi(df['close'], length=14)
+    
+    # MACD
+    macd = ta.macd(df['close'])
+    if macd is not None:
+        df['MACD'] = macd['MACD_12_26_9']
+        df['MACD_SIGNAL'] = macd['MACDs_12_26_9']
+    else:
+        df['MACD'] = 0
+        df['MACD_SIGNAL'] = 0
+    
+    # --- Volatility ---
     # Bollinger Bands
     bb = ta.bbands(df['close'], length=20)
     if bb is not None and not bb.empty:
         df['BBL'] = bb.get('BBL_20_2.0')
         df['BBU'] = bb.get('BBU_20_2.0')
-        
-        # Volatility (Bandwidth)
+        # Bandwidth
         if df['BBU'] is not None and df['BBL'] is not None:
             df['VOLATILITY'] = (df['BBU'] - df['BBL']) / df['close']
         else:
@@ -46,18 +56,28 @@ def calculate_metrics(df):
         df['BBL'] = df['close']
         df['BBU'] = df['close']
         df['VOLATILITY'] = 0
-    
+        
+    # ATR (Average True Range) for Targets/Stops
+    df['ATR'] = ta.atr(df['high'], df['low'], df['close'], length=14)
+
+    # --- Volume ---
     # Volume SMA
     df['VOL_SMA_20'] = ta.sma(df['volume'], length=20)
     
-    # Fill any remaining NaNs to prevent app crashes
+    # Relative Volume (RVOL)
+    if df['VOL_SMA_20'] is not None:
+        df['RVOL'] = df['volume'] / df['VOL_SMA_20']
+    else:
+        df['RVOL'] = 1.0
+    
+    # Fill any remaining NaNs
     df.fillna(0, inplace=True)
     
     return df
 
 def score_stock(df, ticker, strategy='balanced'):
     """
-    Generates a score (0-100) based on strategy.
+    Generates a professional score (0-100) based on multi-factor analysis.
     """
     if df.empty or len(df) < 50:
         return 0, 0, "Insufficient Data"
@@ -66,86 +86,94 @@ def score_stock(df, ticker, strategy='balanced'):
     score = 0
     reasons = []
     
-    # --- Strategy Filters (Strict Ticker Check) ---
+    # --- 1. Trend Filter (The Foundation) ---
+    # A stock must be in a valid trend to even be considered.
+    trend_score = 0
+    if current['close'] > current['SMA_50']:
+        trend_score += 10
+        if current['SMA_50'] > current['SMA_200']: # Golden Cross alignment
+            trend_score += 10
+            
+    # ADX Confirmation (Trend Strength)
+    if current['ADX'] > 25:
+        trend_score += 10
+        reasons.append(f"Strong Trend (ADX {current['ADX']:.0f})")
+    elif current['ADX'] < 20:
+        trend_score -= 5 # Weak trend
+        
+    # --- 2. Strategy Specifics ---
+    
     if strategy == 'conservative':
+        # Filter: Must be a stable blue-chip or index
         if ticker not in CONSERVATIVE_TICKERS and ticker not in INDICES:
-            return 0, current['close'], "Not a conservative stock"
-        
-        # Penalize high volatility
-        if current.get('VOLATILITY', 0) > 0.03: # Stricter: 0.05 -> 0.03
-            score -= 30 # Stricter penalty
-            reasons.append("Too Volatile")
+            return 0, current['close'], "Not a conservative asset"
             
+        # Criteria: Pullback in Uptrend
+        if trend_score >= 20: # Must be in uptrend
+            score += 40
+            
+            # RSI: Not overbought (Value area)
+            if 40 <= current['RSI'] <= 60:
+                score += 20
+                reasons.append("Fair Value RSI")
+            elif current['RSI'] < 40:
+                score += 30 # Buy the dip
+                reasons.append("Oversold Opportunity")
+            elif current['RSI'] > 70:
+                score -= 20 # Too expensive
+                
+            # Low Volatility Preference
+            if current.get('VOLATILITY', 0) < 0.03:
+                score += 10
+            else:
+                score -= 10
+                
     elif strategy == 'moonshot':
+        # Filter: High beta / Growth
         if ticker not in MOONSHOT_TICKERS:
-            return 0, current['close'], "Not a moonshot stock"
+            return 0, current['close'], "Not a growth asset"
             
-        # Reward high volatility but don't strictly penalize if it's just "okay"
-        if current.get('VOLATILITY', 0) > 0.02: 
-            score += 15
-        
-        # Bonus for recent momentum
-        if current['RSI'] > 50:
+        # Criteria: High Momentum Breakout
+        if trend_score >= 10: # Trend can be emerging
+            score += 20
+            
+        # Relative Volume (Institutional Interest)
+        if current.get('RVOL', 1) > 1.5:
+            score += 25
+            reasons.append(f"High Inst. Volume ({current['RVOL']:.1f}x)")
+        elif current.get('RVOL', 1) > 1.2:
             score += 10
             
-    # --- Base Logic ---
-    
-    # 1. Trend (Weighted heavily)
-    if current['close'] > current['SMA_50']:
-        score += 25 # Increased weight
-        reasons.append("Bullish Trend")
-    elif current['close'] < current['SMA_50']:
-        score -= 10 # Penalize downtrend
-    
-    # 2. Momentum (RSI)
-    if strategy == 'moonshot':
-        # Explosive momentum
-        if current['RSI'] > 60: # Stricter
+        # RSI Momentum
+        if 55 < current['RSI'] < 75: # Sweet spot for momentum
             score += 25
             reasons.append("Strong Momentum")
-        elif current['RSI'] < 30:
-             score += 20
-             reasons.append("Oversold Bounce Play")
-    else:
-        # Steady
-        if 45 < current['RSI'] < 65: # Stricter range
-            score += 15
-            reasons.append("Stable RSI")
+        elif current['RSI'] > 80:
+            score -= 10 # Blow-off top risk
             
-    # 3. MACD
-    if current['MACD'] > current['MACD_SIGNAL']:
-        score += 20
-        reasons.append("MACD Buy Signal")
+        # MACD Divergence/Cross
+        if current['MACD'] > current['MACD_SIGNAL']:
+            score += 10
+            
+    # --- 3. Universal Penalties ---
+    if current['close'] < current['SMA_200']:
+        score -= 20 # Trading below 200 SMA is dangerous
         
-    # 4. Volume
-    if current['volume'] > current['VOL_SMA_20'] * 1.1: # Must be 10% higher
-        score += 15
-        reasons.append("High Volume")
-
     # Cap score
     score = min(100, max(0, score))
     
-    # Prediction Logic
-    volatility = current.get('VOLATILITY', 0)
-    if pd.isna(volatility): volatility = 0 # Double check
+    # --- Professional Targets (ATR Based) ---
+    atr = current.get('ATR', current['close']*0.02)
+    if atr == 0: atr = current['close']*0.02
     
-    # More realistic targets
     if strategy == 'moonshot':
-        upside_pct = volatility * 2.0 # Aggressive target
+        # Target: 3x ATR (Swing trade)
+        target_price = current['close'] + (atr * 3)
     else:
-        upside_pct = volatility * 0.8 # Conservative target
+        # Target: 1.5x ATR (Conservative swing)
+        target_price = current['close'] + (atr * 1.5)
         
-    # Timeframe adjustments for target
-    if hasattr(df, 'timeframe_mult'): 
-        pass
-        
-    # Restore missing prediction logic
-    if score >= 40: # Stricter cutoff (was 30)
-        prediction = current['close'] * (1 + upside_pct)
-    else:
-        prediction = current['close']
-        
-    return score, prediction, reasons
+    return score, target_price, reasons
 
 def get_top_picks(tickers, timeframe='day', strategy='balanced', min_score=30):
     """Analyzes all tickers and returns top picks for a strategy."""
@@ -201,7 +229,9 @@ def get_top_picks(tickers, timeframe='day', strategy='balanced', min_score=30):
             'Confidence Score': score,
             'Signals': ", ".join(reasons),
             'Volatility': volatility,
-            'Volume Change': vol_change
+            'Volume Change': vol_change,
+            'ADX': df.iloc[-1].get('ADX', 0),
+            'RVOL': df.iloc[-1].get('RVOL', 0)
         })
         
     results_df = pd.DataFrame(results)
