@@ -483,14 +483,6 @@ elif page == "Past Recommendations":
     else:
         st.info("No past recommendations found yet. Visit the Investment Forecast page to generate and auto-save picks.")
             
-        st.dataframe(filtered_df.style.format({
-            'entry_price': '${:.2f}',
-            'predicted_price': '${:.2f}',
-            'confidence_score': '{:.0f}'
-        }), use_container_width=True)
-    else:
-        st.info("No history yet. Go to the 'Investment Forecast' page and click 'Save Picks' to start tracking.")
-
 # --- Page 4: Opportunities ---
 elif page == "Opportunities":
     st.markdown("# 💰 Investment Opportunities")
