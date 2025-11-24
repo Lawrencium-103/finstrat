@@ -1,3 +1,25 @@
+import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
+import yfinance as yf
+from database import load_stock_data as db_load_stock_data, save_pick, get_past_picks, init_db, pick_exists
+from analysis import get_top_picks, calculate_metrics, plot_forecast_chart
+from data_loader import TICKERS, update_database
+from datetime import timedelta, datetime
+
+# Ensure DB is updated with new schema
+init_db()
+
+# Caching for performance
+@st.cache_data(ttl=900) # Cache for 15 minutes
+def load_stock_data(ticker):
+    return db_load_stock_data(ticker)
+
+st.set_page_config(page_title="Finstrat", layout="wide", page_icon="📈")
+
+# --- Custom CSS for Modern UI ---
+st.markdown("""
+<style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
     
     /* Global Styles */
