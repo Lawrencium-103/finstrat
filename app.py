@@ -147,6 +147,14 @@ st.sidebar.image("logo.png", width=220)
 # Reordered: Opportunities comes before Past Recommendations
 page = st.sidebar.radio("Navigate", ["Overview", "Investment Forecast", "Opportunities", "Past Recommendations", "About Us"])
 
+# Date Context in Sidebar
+current_date = datetime.now().strftime("%B %d, %Y")
+st.sidebar.markdown(f"""
+<div style="text-align: center; color: #778DA9; font-size: 0.9rem; margin-top: 10px; margin-bottom: 20px;">
+    📅 {current_date}
+</div>
+""", unsafe_allow_html=True)
+
 if st.sidebar.button("Refresh Data", type="primary"):
     with st.spinner("Fetching latest data..."):
         update_database()
@@ -239,11 +247,12 @@ def get_news_safe(ticker):
 # --- Page 1: Overview ---
 if page == "Overview":
     # Hero Section
-    st.markdown("""
+    today = datetime.now().strftime("%B %d, %Y")
+    st.markdown(f"""
     <div style="background: linear-gradient(135deg, #1B263B 0%, #0D1B2A 100%); padding: 40px; border-radius: 16px; border: 1px solid #415A77; margin-bottom: 30px; text-align: center;">
         <h1 style="font-size: 3.5rem; margin-bottom: 10px; background: linear-gradient(90deg, #8BC34A, #FFFFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Market Overview</h1>
         <p style="font-size: 1.2rem; color: #E0E1DD; max-width: 800px; margin: 0 auto;">
-            Real-time tracking of 60+ major US assets with AI-driven technical analysis.
+            Real-time tracking of 60+ major US assets | 📅 <b>{today}</b>
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -339,11 +348,15 @@ elif page == "Investment Forecast":
                 st.warning(f"No strong signals found for {strategy_tab}. Showing top potential candidates based on volatility.")
             
             # Hero Section
+            pick_date = datetime.now().strftime("%b %d")
             st.markdown(f"""
             <div style="background-color: #004D40; padding: 20px; border-radius: 10px; border: 1px solid #00695C; margin-bottom: 20px;">
-                <h2 style="margin:0; color: #E0F2F1;">🏆 Top Pick: {best['Ticker']}</h2>
-                <h3 style="margin:0; color: #69F0AE;">Target: ${best['Predicted Price']:.2f} (+{best['Upside %']:.2f}%)</h3>
-                <p style="margin-top:10px; color: #B2DFDB;">{best['Signals']}</p>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="margin:0; color: #E0F2F1;">🏆 Top Pick: {best['Ticker']}</h2>
+                    <span style="background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; color: #B2DFDB;">📅 {pick_date}</span>
+                </div>
+                <h3 style="margin-top:10px; color: #69F0AE;">Target: ${best['Predicted Price']:.2f} (+{best['Upside %']:.2f}%)</h3>
+                <p style="margin-top:5px; color: #B2DFDB;">{best['Signals']}</p>
             </div>
             """, unsafe_allow_html=True)
             

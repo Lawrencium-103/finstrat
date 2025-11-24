@@ -165,9 +165,14 @@ def get_top_picks(tickers, timeframe='day', strategy='balanced', min_score=30):
         if score < min_score: # Use dynamic cutoff
             continue
             
+        # Safe access for Volatility
+        volatility = df.iloc[-1].get('VOLATILITY', 0)
+        
         current_price = df.iloc[-1]['close']
         vol_change = 0
-        if df.iloc[-1]['VOL_SMA_20'] > 0:
+        
+        # Safe access for Volume SMA
+        if 'VOL_SMA_20' in df.columns and df.iloc[-1]['VOL_SMA_20'] > 0:
             vol_change = (df.iloc[-1]['volume'] - df.iloc[-1]['VOL_SMA_20']) / df.iloc[-1]['VOL_SMA_20']
             
         results.append({
@@ -177,7 +182,7 @@ def get_top_picks(tickers, timeframe='day', strategy='balanced', min_score=30):
             'Upside %': ((prediction - current_price) / current_price) * 100,
             'Confidence Score': score,
             'Signals': ", ".join(reasons),
-            'Volatility': df.iloc[-1]['VOLATILITY'],
+            'Volatility': volatility,
             'Volume Change': vol_change
         })
         
