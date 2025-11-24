@@ -1,20 +1,3 @@
-import streamlit as st
-import pandas as pd
-import plotly.graph_objects as go
-import yfinance as yf
-from database import load_stock_data, save_pick, get_past_picks, init_db, pick_exists
-from analysis import get_top_picks, calculate_metrics
-from data_loader import TICKERS, update_database
-from datetime import timedelta, datetime
-
-# Ensure DB is updated with new schema
-init_db()
-
-st.set_page_config(page_title="Finstrat", layout="wide", page_icon="📈")
-
-# --- Custom CSS for Modern UI ---
-st.markdown("""
-<style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
     
     /* Global Styles */
@@ -76,21 +59,24 @@ st.markdown("""
     }
     
     /* Reduce Top Whitespace */
+    /* Reduce Top Whitespace */
     .block-container {
-        padding-top: 1rem !important;
+        padding-top: 0.5rem !important;
         padding-bottom: 1rem !important;
+        margin-top: -2rem !important;
     }
     
     /* Headers */
     h1 {
         font-family: 'Century Gothic', sans-serif !important;
-        font-size: 4rem !important; /* Increased size */
+        font-size: 3.5rem !important; /* Slightly smaller to fit better */
         font-weight: 800 !important;
         background: linear-gradient(90deg, #8BC34A, #FFFFFF); /* Lime to White */
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        padding-bottom: 1rem;
-        line-height: 1.2;
+        padding-bottom: 0.5rem;
+        line-height: 1.1;
+        margin-bottom: 0.5rem !important;
     }
     h2, h3 {
         font-family: 'Century Gothic', sans-serif !important;
@@ -138,6 +124,7 @@ st.markdown("""
         color: #8BC34A;
     }
 </style>
+</style>
 """, unsafe_allow_html=True)
 
 # --- Sidebar ---
@@ -153,6 +140,7 @@ current_date = datetime.now().strftime("%B %d, %Y")
 # Get last data update time
 last_update = "Unknown"
 try:
+    # Use cached loader for metadata too
     spy_df = load_stock_data("SPY")
     if not spy_df.empty:
         last_update = spy_df.index[-1].strftime("%H:%M EST")
@@ -359,7 +347,7 @@ elif page == "Investment Forecast":
                 st.warning(f"No strong signals found for {strategy_tab}. Showing top potential candidates based on volatility.")
             
             # Hero Section
-            pick_date = datetime.now().strftime("%b %d")
+            pick_date = datetime.now().strftime("%b %d, %H:%M")
             st.markdown(f"""
             <div style="background-color: #004D40; padding: 20px; border-radius: 10px; border: 1px solid #00695C; margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -475,6 +463,10 @@ elif page == "Past Recommendations":
                 # Format for display
                 display_df = filtered_df[['date', 'ticker', 'strategy', 'entry_price', 'predicted_price', 'signals']].copy()
                 display_df.columns = ['Date', 'Ticker', 'Strategy', 'Entry Price', 'Target Price', 'Signals']
+                
+                # Ensure numeric columns are floats to prevent TypeError
+                display_df['Entry Price'] = pd.to_numeric(display_df['Entry Price'], errors='coerce').fillna(0)
+                display_df['Target Price'] = pd.to_numeric(display_df['Target Price'], errors='coerce').fillna(0)
                 
                 st.dataframe(display_df.style.format({
                     'Entry Price': '${:.2f}',

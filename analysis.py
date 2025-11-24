@@ -50,6 +50,9 @@ def calculate_metrics(df):
     # Volume SMA
     df['VOL_SMA_20'] = ta.sma(df['volume'], length=20)
     
+    # Fill any remaining NaNs to prevent app crashes
+    df.fillna(0, inplace=True)
+    
     return df
 
 def score_stock(df, ticker, strategy='balanced'):
@@ -69,19 +72,19 @@ def score_stock(df, ticker, strategy='balanced'):
             return 0, current['close'], "Not a conservative stock"
         
         # Penalize high volatility
-        if current.get('VOLATILITY', 0) > 0.05: 
-            score -= 20
+        if current.get('VOLATILITY', 0) > 0.03: # Stricter: 0.05 -> 0.03
+            score -= 30 # Stricter penalty
+            reasons.append("Too Volatile")
             
     elif strategy == 'moonshot':
         if ticker not in MOONSHOT_TICKERS:
             return 0, current['close'], "Not a moonshot stock"
             
         # Reward high volatility but don't strictly penalize if it's just "okay"
-        # We want to see the best of what we have
-        if current.get('VOLATILITY', 0) > 0.015: # Lowered from 0.02
+        if current.get('VOLATILITY', 0) > 0.02: 
             score += 15
         
-        # Bonus for recent momentum even if not "explosive"
+        # Bonus for recent momentum
         if current['RSI'] > 50:
             score += 10
             
@@ -89,31 +92,34 @@ def score_stock(df, ticker, strategy='balanced'):
     
     # 1. Trend (Weighted heavily)
     if current['close'] > current['SMA_50']:
-        score += 20
+        score += 25 # Increased weight
         reasons.append("Bullish Trend")
+    elif current['close'] < current['SMA_50']:
+        score -= 10 # Penalize downtrend
     
     # 2. Momentum (RSI)
     if strategy == 'moonshot':
         # Explosive momentum
-        if current['RSI'] > 55:
-            score += 20
+        if current['RSI'] > 60: # Stricter
+            score += 25
             reasons.append("Strong Momentum")
         elif current['RSI'] < 30:
-             score += 15
+             score += 20
              reasons.append("Oversold Bounce Play")
     else:
         # Steady
-        if 40 < current['RSI'] < 70:
-            score += 10
+        if 45 < current['RSI'] < 65: # Stricter range
+            score += 15
+            reasons.append("Stable RSI")
             
     # 3. MACD
     if current['MACD'] > current['MACD_SIGNAL']:
-        score += 15
+        score += 20
         reasons.append("MACD Buy Signal")
         
     # 4. Volume
-    if current['volume'] > current['VOL_SMA_20']:
-        score += 10
+    if current['volume'] > current['VOL_SMA_20'] * 1.1: # Must be 10% higher
+        score += 15
         reasons.append("High Volume")
 
     # Cap score
@@ -121,19 +127,20 @@ def score_stock(df, ticker, strategy='balanced'):
     
     # Prediction Logic
     volatility = current.get('VOLATILITY', 0)
+    if pd.isna(volatility): volatility = 0 # Double check
     
     # More realistic targets
     if strategy == 'moonshot':
-        upside_pct = volatility * 1.5 # 1.5x bandwidth
+        upside_pct = volatility * 2.0 # Aggressive target
     else:
-        upside_pct = volatility * 0.5 # 0.5x bandwidth
+        upside_pct = volatility * 0.8 # Conservative target
         
     # Timeframe adjustments for target
     if hasattr(df, 'timeframe_mult'): 
         pass
         
     # Restore missing prediction logic
-    if score >= 30: # Using the lower cutoff we established
+    if score >= 40: # Stricter cutoff (was 30)
         prediction = current['close'] * (1 + upside_pct)
     else:
         prediction = current['close']
