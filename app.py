@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import yfinance as yf
 from database import load_stock_data, save_pick, get_past_picks, init_db, pick_exists
-from analysis import get_top_picks, calculate_metrics, plot_forecast_chart, get_news_safe
+from analysis import get_top_picks, calculate_metrics, plot_forecast_chart
 from data_loader import TICKERS, update_database
 from datetime import timedelta, datetime
 
