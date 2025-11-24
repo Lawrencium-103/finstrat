@@ -30,11 +30,19 @@ def calculate_metrics(df):
     
     # Bollinger Bands
     bb = ta.bbands(df['close'], length=20)
-    df['BBL'] = bb['BBL_20_2.0']
-    df['BBU'] = bb['BBU_20_2.0']
-    
-    # Volatility (Bandwidth)
-    df['VOLATILITY'] = (df['BBU'] - df['BBL']) / df['close']
+    if bb is not None and not bb.empty:
+        df['BBL'] = bb.get('BBL_20_2.0')
+        df['BBU'] = bb.get('BBU_20_2.0')
+        
+        # Volatility (Bandwidth)
+        if df['BBU'] is not None and df['BBL'] is not None:
+            df['VOLATILITY'] = (df['BBU'] - df['BBL']) / df['close']
+        else:
+            df['VOLATILITY'] = 0
+    else:
+        df['BBL'] = df['close']
+        df['BBU'] = df['close']
+        df['VOLATILITY'] = 0
     
     # Volume SMA
     df['VOL_SMA_20'] = ta.sma(df['volume'], length=20)

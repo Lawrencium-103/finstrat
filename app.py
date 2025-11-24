@@ -149,9 +149,20 @@ page = st.sidebar.radio("Navigate", ["Overview", "Investment Forecast", "Opportu
 
 # Date Context in Sidebar
 current_date = datetime.now().strftime("%B %d, %Y")
+
+# Get last data update time
+last_update = "Unknown"
+try:
+    spy_df = load_stock_data("SPY")
+    if not spy_df.empty:
+        last_update = spy_df.index[-1].strftime("%H:%M EST")
+except:
+    pass
+
 st.sidebar.markdown(f"""
 <div style="text-align: center; color: #778DA9; font-size: 0.9rem; margin-top: 10px; margin-bottom: 20px;">
-    📅 {current_date}
+    📅 {current_date}<br>
+    <span style="font-size: 0.8rem; color: #415A77;">Data Updated: {last_update}</span>
 </div>
 """, unsafe_allow_html=True)
 
