@@ -69,6 +69,19 @@ def save_pick(pick_data):
         conn.close()
     return False
 
+def pick_exists(date, ticker, strategy, timeframe):
+    """Checks if a pick already exists for the given parameters."""
+    conn = get_connection()
+    try:
+        query = "SELECT id FROM past_picks WHERE date = ? AND ticker = ? AND timeframe = ? AND strategy = ?"
+        existing = pd.read_sql(query, conn, params=(date, ticker, timeframe, strategy))
+        return not existing.empty
+    except Exception as e:
+        print(f"Error checking pick existence: {e}")
+        return False
+    finally:
+        conn.close()
+
 def get_past_picks():
     """Retrieves all past picks."""
     conn = get_connection()

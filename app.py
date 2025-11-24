@@ -1,15 +1,3 @@
-import streamlit as st
-import pandas as pd
-import plotly.graph_objects as go
-import yfinance as yf
-from database import load_stock_data, save_pick, get_past_picks, init_db
-from analysis import get_top_picks, calculate_metrics
-from data_loader import TICKERS, update_database
-from datetime import timedelta, datetime
-
-# Ensure DB is updated with new schema
-init_db()
-
 st.set_page_config(page_title="Finstrat", layout="wide", page_icon="📈")
 
 # --- Custom CSS for Modern UI ---
@@ -395,27 +383,23 @@ elif page == "Investment Forecast":
                 # Chart
                 st.plotly_chart(plot_forecast_chart(best['Ticker'], best_df, best['Predicted Price'], timeframe), use_container_width=True)
             
-            # Save Button
-            if st.button(f"💾 Save {timeframe.capitalize()} Picks to History"):
-                today_str = datetime.now().strftime("%Y-%m-%d")
-                count = 0
-                for _, row in picks.head(5).iterrows():
-                    pick_data = {
-                        'date': today_str,
-                        'ticker': row['Ticker'],
-                        'strategy': strategy_code,
-                        'timeframe': timeframe,
-                        'entry_price': row['Current Price'],
-                        'predicted_price': row['Predicted Price'],
-                        'confidence_score': row['Confidence Score'],
-                        'signals': row['Signals']
-                    }
-                    if save_pick(pick_data):
-                        count += 1
-                if count > 0:
-                    st.success(f"Saved {count} picks to Past Recommendations.")
-                else:
-                    st.info("Picks already saved for today.")
+            # Auto-Save Top Pick
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            
+            # Check if we already have a pick for this day/strategy/timeframe
+            if not pick_exists(today_str, best['Ticker'], strategy_code, timeframe):
+                pick_data = {
+                    'date': today_str,
+                    'ticker': best['Ticker'],
+                    'strategy': strategy_code,
+                    'timeframe': timeframe,
+                    'entry_price': best['Current Price'],
+                    'predicted_price': best['Predicted Price'],
+                    'confidence_score': best['Confidence Score'],
+                    'signals': best['Signals']
+                }
+                save_pick(pick_data)
+                # No toast needed to avoid spam, it just happens silently
 
             # Table
             st.subheader("All Candidates")
@@ -465,23 +449,39 @@ elif page == "Investment Forecast":
 # --- Page 3: Past Recommendations ---
 elif page == "Past Recommendations":
     st.markdown("# 📜 Past Recommended Stocks")
-    st.markdown("Track the performance of previous AI selections.")
+    st.markdown("Historical record of AI-generated top picks. These are automatically saved when generated.")
     
     history_df = get_past_picks()
     
     if not history_df.empty:
-        # Filters
-        col1, col2 = st.columns(2)
-        with col1:
-            f_strategy = st.selectbox("Filter by Strategy", ["All"] + list(history_df['strategy'].unique()))
-        with col2:
-            f_timeframe = st.selectbox("Filter by Timeframe", ["All"] + list(history_df['timeframe'].unique()))
+        # Create tabs for each timeframe
+        ht1, ht2, ht3, ht4 = st.tabs(["Daily History", "Weekly History", "Monthly History", "Quarterly History"])
+        
+        def show_history_table(timeframe_filter):
+            filtered_df = history_df[history_df['timeframe'] == timeframe_filter].copy()
+            if not filtered_df.empty:
+                # Format for display
+                display_df = filtered_df[['date', 'ticker', 'strategy', 'entry_price', 'predicted_price', 'signals']].copy()
+                display_df.columns = ['Date', 'Ticker', 'Strategy', 'Entry Price', 'Target Price', 'Signals']
+                
+                st.dataframe(display_df.style.format({
+                    'Entry Price': '${:.2f}',
+                    'Target Price': '${:.2f}'
+                }), use_container_width=True)
+            else:
+                st.info(f"No history yet for {timeframe_filter} picks.")
+
+        with ht1:
+            show_history_table('day')
+        with ht2:
+            show_history_table('week')
+        with ht3:
+            show_history_table('month')
+        with ht4:
+            show_history_table('quarter')
             
-        filtered_df = history_df.copy()
-        if f_strategy != "All":
-            filtered_df = filtered_df[filtered_df['strategy'] == f_strategy]
-        if f_timeframe != "All":
-            filtered_df = filtered_df[filtered_df['timeframe'] == f_timeframe]
+    else:
+        st.info("No past recommendations found yet. Visit the Investment Forecast page to generate and auto-save picks.")
             
         st.dataframe(filtered_df.style.format({
             'entry_price': '${:.2f}',
