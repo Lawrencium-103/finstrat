@@ -58,7 +58,7 @@ def score_stock(df, ticker, strategy='balanced'):
             return 0, current['close'], "Not a conservative stock"
         
         # Penalize high volatility
-        if current['VOLATILITY'] > 0.05: 
+        if current.get('VOLATILITY', 0) > 0.05: 
             score -= 20
             
     elif strategy == 'moonshot':
@@ -67,7 +67,7 @@ def score_stock(df, ticker, strategy='balanced'):
             
         # Reward high volatility but don't strictly penalize if it's just "okay"
         # We want to see the best of what we have
-        if current['VOLATILITY'] > 0.015: # Lowered from 0.02
+        if current.get('VOLATILITY', 0) > 0.015: # Lowered from 0.02
             score += 15
         
         # Bonus for recent momentum even if not "explosive"
@@ -109,7 +109,7 @@ def score_stock(df, ticker, strategy='balanced'):
     score = min(100, max(0, score))
     
     # Prediction Logic
-    volatility = current['VOLATILITY']
+    volatility = current.get('VOLATILITY', 0)
     
     # More realistic targets
     if strategy == 'moonshot':
