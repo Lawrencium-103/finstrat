@@ -264,6 +264,26 @@ def get_news_safe(ticker):
         return valid_news
     except:
         return []
+        return valid_news
+    except:
+        return []
+
+def display_footer():
+    """Displays the last data update time at the bottom of the page."""
+    st.markdown("---")
+    last_update = "Unknown"
+    try:
+        spy_df = load_stock_data("SPY")
+        if not spy_df.empty:
+            last_update = spy_df.index[-1].strftime("%Y-%m-%d %H:%M EST")
+    except:
+        pass
+        
+    st.markdown(f"""
+    <div style="text-align: center; color: #778DA9; font-size: 0.8rem; padding: 20px;">
+        Last Data Update: {last_update} | © 2025 Finstrat
+    </div>
+    """, unsafe_allow_html=True)
 
 # --- Page 1: Overview ---
 if page == "Overview":
@@ -339,6 +359,9 @@ if page == "Overview":
                 template="plotly_dark", hovermode="x unified"
             )
             st.plotly_chart(comp_fig, use_container_width=True)
+            st.plotly_chart(comp_fig, use_container_width=True)
+            
+    display_footer()
 
 # --- Page 2: Forecast ---
 elif page == "Investment Forecast":
@@ -467,6 +490,8 @@ elif page == "Investment Forecast":
     with t4:
         st.info("Strategy: Quarterly Hold.")
         display_picks('quarter')
+        
+    display_footer()
 
 # --- Page 3: Past Recommendations ---
 elif page == "Past Recommendations":
@@ -508,6 +533,8 @@ elif page == "Past Recommendations":
             
     else:
         st.info("No past recommendations found yet. Visit the Investment Forecast page to generate and auto-save picks.")
+        
+    display_footer()
             
 # --- Page 4: Opportunities ---
 elif page == "Opportunities":
@@ -530,6 +557,8 @@ elif page == "Opportunities":
         | **Dec 08** | Non-Farm Payrolls | 🔴 High |
         | **Dec 13** | FOMC Meeting | 🔴 High |
         """)
+        
+    display_footer()
 
 # --- Page 5: About Us ---
 elif page == "About Us":
@@ -582,3 +611,5 @@ elif page == "About Us":
         **Looking to build a similar solution?**  
         I am available for consulting and development projects. Let's transform your data strategy.
         """)
+        
+    display_footer()

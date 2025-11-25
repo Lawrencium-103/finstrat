@@ -59,6 +59,10 @@ def calculate_metrics(df):
         
     # ATR (Average True Range) for Targets/Stops
     df['ATR'] = ta.atr(df['high'], df['low'], df['close'], length=14)
+    
+    # Fallback Volatility if BB failed (0)
+    if df['VOLATILITY'].iloc[-1] == 0 and df['ATR'].iloc[-1] > 0:
+        df['VOLATILITY'] = df['ATR'] / df['close']
 
     # --- Volume ---
     # Volume SMA
