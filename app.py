@@ -264,9 +264,6 @@ def get_news_safe(ticker):
         return valid_news
     except:
         return []
-        return valid_news
-    except:
-        return []
 
 def display_footer():
     """Displays the last data update time at the bottom of the page."""
