@@ -38,6 +38,6 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "Auto-update stock data"
-            git pull --rebase
+            git pull --rebase -Xtheirs
             git push
           fi
