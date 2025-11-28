@@ -38,6 +38,9 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "Auto-update stock data"
-            git pull --rebase -Xtheirs
+            # Fetch latest changes
+            git fetch origin main
+            # Merge remote changes, favoring OUR local stocks.db if there's a conflict
+            git merge -s recursive -Xours origin/main --no-edit
             git push
           fi
